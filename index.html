@@ -1,0 +1,1025 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regale Clicks — Sistema de Agentes</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #18181f;
+    --border: rgba(255,255,255,0.07);
+    --border-active: rgba(255,255,255,0.15);
+    --text: #f0eff5;
+    --muted: rgba(240,239,245,0.45);
+    --purple: #7c5cfc;
+    --purple-light: #a98bff;
+    --purple-dim: rgba(124,92,252,0.12);
+    --blue: #3b8bff;
+    --teal: #00c9a7;
+    --amber: #f5a623;
+    --coral: #ff6b6b;
+    --green: #4caf7d;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .logo {
+    font-family: var(--font-head);
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+  .logo span { color: var(--purple-light); }
+  .agent-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--teal);
+    box-shadow: 0 0 6px var(--teal);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+  /* ── LAYOUT ── */
+  .main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 260px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .sidebar-section {
+    padding: 16px 16px 8px;
+    font-size: 10px;
+    font-family: var(--font-head);
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .agent-card {
+    margin: 4px 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+  .agent-card:hover { background: var(--bg3); border-color: var(--border); }
+  .agent-card.active { background: var(--purple-dim); border-color: var(--purple); }
+  .agent-card-header {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-bottom: 3px;
+  }
+  .agent-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .agent-name {
+    font-family: var(--font-head);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text);
+  }
+  .agent-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.4;
+    padding-left: 17px;
+  }
+  .divider { height: 1px; background: var(--border); margin: 10px 16px; }
+
+  /* ── CHAT AREA ── */
+  .chat-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Active agent banner */
+  .active-banner {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .active-banner-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+  }
+  .active-banner strong { font-family: var(--font-head); font-weight: 700; font-size: 13px; color: var(--text); }
+
+  /* Messages */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 24px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    scroll-behavior: smooth;
+  }
+  .messages::-webkit-scrollbar { width: 4px; }
+  .messages::-webkit-scrollbar-track { background: transparent; }
+  .messages::-webkit-scrollbar-thumb { background: var(--border-active); border-radius: 2px; }
+
+  .msg { display: flex; gap: 12px; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+
+  .msg.user { flex-direction: row-reverse; }
+  .avatar {
+    width: 32px; height: 32px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px;
+    font-family: var(--font-head);
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .avatar.cmo { background: var(--purple-dim); color: var(--purple-light); border: 1px solid rgba(124,92,252,0.3); }
+  .avatar.user-av { background: var(--bg3); color: var(--muted); border: 1px solid var(--border); }
+  .avatar.sub { font-size: 11px; }
+
+  .bubble {
+    max-width: 75%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.65;
+    border: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .msg.user .bubble { background: var(--purple-dim); border-color: rgba(124,92,252,0.25); }
+
+  .bubble .agent-tag {
+    display: inline-block;
+    font-size: 10px;
+    font-family: var(--font-head);
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-bottom: 7px;
+  }
+  .bubble strong { font-weight: 600; color: var(--text); }
+  .bubble ul { padding-left: 18px; margin: 6px 0; }
+  .bubble li { margin: 3px 0; font-size: 13px; color: rgba(240,239,245,0.85); }
+  .bubble h4 { font-family: var(--font-head); font-size: 13px; font-weight: 700; margin: 10px 0 4px; color: var(--text); }
+  .bubble p { margin: 4px 0; }
+  .bubble .routing-note {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 8px;
+    font-style: italic;
+  }
+
+  /* Delegation visual */
+  .delegation-flow {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .delegation-flow span {
+    padding: 2px 8px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+  }
+  .delegation-flow .arrow { color: var(--muted); font-size: 10px; }
+  .delegation-flow .active-agent { border-color: currentColor; }
+
+  /* Thinking indicator */
+  .thinking {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .thinking-bubble {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 200px;
+  }
+  .thinking-label { font-size: 11px; color: var(--muted); font-style: italic; }
+  .thinking-dots { display: flex; gap: 5px; }
+  .thinking-dots span {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--purple);
+    animation: dot 1.2s ease-in-out infinite;
+  }
+  .thinking-dots span:nth-child(2) { animation-delay: 0.2s; }
+  .thinking-dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes dot { 0%,100%{opacity:0.2;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
+
+  /* ── INPUT AREA ── */
+  .input-area {
+    padding: 16px 20px 20px;
+    border-top: 1px solid var(--border);
+    background: var(--bg2);
+    flex-shrink: 0;
+  }
+  .input-wrap {
+    display: flex;
+    gap: 10px;
+    align-items: flex-end;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 10px 14px;
+    transition: border-color 0.2s;
+  }
+  .input-wrap:focus-within { border-color: var(--border-active); }
+  textarea {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: none;
+    font-family: var(--font-body);
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.5;
+    max-height: 120px;
+    overflow-y: auto;
+  }
+  textarea::placeholder { color: var(--muted); }
+  .send-btn {
+    width: 34px; height: 34px;
+    border-radius: 9px;
+    background: var(--purple);
+    border: none;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { background: var(--purple-light); transform: scale(1.05); }
+  .send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .send-btn svg { width: 16px; height: 16px; fill: white; }
+  .input-hint {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+    text-align: center;
+  }
+
+  /* Quick prompts */
+  .quick-prompts {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .qp {
+    font-size: 12px;
+    padding: 5px 11px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--bg3);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .qp:hover { border-color: var(--border-active); color: var(--text); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Regale<span>.</span>AI</div>
+  <div class="agent-status">
+    <div class="status-dot"></div>
+    Sistema multi-agente ativo
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-section">Orquestrador</div>
+    <div class="agent-card active" data-agent="cmo" onclick="selectAgent('cmo')">
+      <div class="agent-card-header">
+        <div class="agent-dot" style="background:var(--purple);box-shadow:0 0 6px var(--purple)"></div>
+        <div class="agent-name">CMO Central</div>
+      </div>
+      <div class="agent-desc">Estratégia, diagnóstico e orquestração dos agentes</div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="sidebar-section">Agentes Especializados</div>
+
+    <div class="agent-card" data-agent="growth" onclick="selectAgent('growth')">
+      <div class="agent-card-header">
+        <div class="agent-dot" style="background:var(--blue)"></div>
+        <div class="agent-name">Tráfego & Growth</div>
+      </div>
+      <div class="agent-desc">Meta Ads, Google, funis, CRO, ROAS, escala</div>
+    </div>
+
+    <div class="agent-card" data-agent="comercial" onclick="selectAgent('comercial')">
+      <div class="agent-card-header">
+        <div class="agent-dot" style="background:var(--coral)"></div>
+        <div class="agent-name">Comercial</div>
+      </div>
+      <div class="agent-desc">SDR, qualificação, proposta, CRM, fechamento</div>
+    </div>
+
+    <div class="agent-card" data-agent="entrega" onclick="selectAgent('entrega')">
+      <div class="agent-card-header">
+        <div class="agent-dot" style="background:var(--green)"></div>
+        <div class="agent-name">Entrega</div>
+      </div>
+      <div class="agent-desc">Onboarding, processos, relatórios, operação</div>
+    </div>
+
+    <div class="agent-card" data-agent="cs" onclick="selectAgent('cs')">
+      <div class="agent-card-header">
+        <div class="agent-dot" style="background:var(--teal)"></div>
+        <div class="agent-name">CS & Retenção</div>
+      </div>
+      <div class="agent-desc">NPS, upsell, renovação, jornada do cliente</div>
+    </div>
+
+    <div class="agent-card" data-agent="financeiro" onclick="selectAgent('financeiro')">
+      <div class="agent-card-header">
+        <div class="agent-dot" style="background:var(--amber)"></div>
+        <div class="agent-name">Financeiro & Gestão</div>
+      </div>
+      <div class="agent-desc">Margem, forecast, dashboard, budget, metas</div>
+    </div>
+
+    <div class="divider"></div>
+    <div style="padding:12px 16px">
+      <button onclick="clearChat()" style="width:100%;padding:8px;background:transparent;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;cursor:pointer;font-family:var(--font-body);transition:all 0.2s" onmouseover="this.style.borderColor='var(--border-active)';this.style.color='var(--text)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">
+        Limpar conversa
+      </button>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-wrap">
+    <div class="active-banner" id="activeBanner">
+      <div class="active-banner-dot" style="background:var(--purple);box-shadow:0 0 5px var(--purple)"></div>
+      <div><strong>CMO Central</strong> — Orquestrador estratégico da Regale Clicks</div>
+    </div>
+
+    <div class="messages" id="messages">
+      <!-- Welcome message -->
+      <div class="msg">
+        <div class="avatar cmo">RC</div>
+        <div class="bubble">
+          <div class="agent-tag" style="background:rgba(124,92,252,0.15);color:var(--purple-light)">CMO Central</div>
+          <p><strong>Sistema de agentes da Regale Clicks ativo.</strong></p>
+          <p style="margin-top:6px">Sou o CMO Central — recebo sua demanda, identifico qual agente especializado tem mais capacidade para resolver, delego, consolido a resposta e te entrego com contexto estratégico.</p>
+          <h4>Agentes disponíveis:</h4>
+          <ul>
+            <li><strong style="color:var(--blue)">Tráfego & Growth</strong> — campanhas, funis, criativos, escala, ROAS</li>
+            <li><strong style="color:var(--coral)">Comercial</strong> — processo de vendas, proposta, CRM, SDR</li>
+            <li><strong style="color:var(--green)">Entrega</strong> — onboarding, SOPs, operação, relatórios</li>
+            <li><strong style="color:var(--teal)">CS & Retenção</strong> — cliente ativo, NPS, upsell, renovação</li>
+            <li><strong style="color:var(--amber)">Financeiro & Gestão</strong> — margem, CAC, LTV, forecast, budget</li>
+          </ul>
+          <p style="margin-top:8px;font-size:13px;color:var(--muted)">Me manda sua demanda. Eu roteio para o agente certo.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="quick-prompts" id="quickPrompts">
+        <div class="qp" onclick="fillPrompt('Preciso estruturar meu processo comercial do zero')">Processo comercial</div>
+        <div class="qp" onclick="fillPrompt('Como escalar meus Meta Ads sem aumentar CPL?')">Escalar Meta Ads</div>
+        <div class="qp" onclick="fillPrompt('Qual minha margem ideal por cliente e como calcular o CAC?')">Margem & CAC</div>
+        <div class="qp" onclick="fillPrompt('Como reduzir churn e aumentar LTV dos meus clientes?')">Retenção & LTV</div>
+        <div class="qp" onclick="fillPrompt('Preciso de um SOP de onboarding de clientes')">SOP Onboarding</div>
+      </div>
+      <div class="input-wrap">
+        <textarea id="userInput" placeholder="Qual é sua demanda?" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">
+          <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+      </div>
+      <div class="input-hint">Enter para enviar · Shift+Enter para nova linha</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const AGENTS = {
+  cmo: {
+    name: 'CMO Central',
+    color: 'var(--purple-light)',
+    tagBg: 'rgba(124,92,252,0.15)',
+    initials: 'RC',
+    systemPrompt: `Você é o CMO Central da Regale Clicks — agência de performance com dois braços: Growth Marketing e Inteligência Artificial (agentes e automações). Seu método exclusivo é o RGS, dividido em 4 sprints: Aquisição Inteligente, Conversão Estruturada, Transformação de Dados e Otimização Contínua.
+
+PAPEL: Orquestrador estratégico e cérebro da agência. Você recebe demandas do dono, analisa, identifica qual agente especializado deve tratar, e entrega resposta estratégica consolidada com visão de CMO de elite.
+
+CONTEXTO COMPLETO DA REGALE CLICKS:
+- Agência: Regale Clicks
+- Braços: Growth Marketing + IA & Automações
+- Método exclusivo: RGS — Sprint 1 (Aquisição Inteligente), Sprint 2 (Conversão Estruturada), Sprint 3 (Transformação de Dados), Sprint 4 (Otimização Contínua)
+- Contato: (11) 92617-1811 | regaleclicks.com
+- Estágio atual: INÍCIO — agência com algumas semanas de vida
+- Clientes ativos: 1 cliente (social media, R$3.300/mês) — upsell para growth em andamento
+- MRR atual: R$3.300
+- Fase: estruturando processos, captando primeiros clientes, validando método
+
+MODELO DE PRECIFICAÇÃO:
+- Base interna: R$80/hora (régua de custo — NÃO expor ao cliente)
+- Gestão Growth padrão (2 fontes de tráfego): ~R$3.200–R$3.500/mês
+- O cliente compra resultado/escopo, não horas — horas são cálculo interno
+- Valor varia por complexidade, número de canais, tamanho do projeto
+- IA & Automações: mesmo modelo de hora + custo de ferramentas (Manus R$222/mês + Claude Pro ~R$110/mês = R$332 de custo → cobrar R$465+ com margem de 40%)
+- Estratégia de ticket: subir o valor/hora com o tempo conforme cases e autoridade crescem
+- Clientes novos sempre entram no valor atual ou superior
+
+PRIORIDADES ESTRATÉGICAS ATUAIS:
+1. Fazer upsell do cliente atual de social media para growth (receita imediata)
+2. Captar 2-4 novos clientes nos próximos 60-90 dias
+3. Estruturar processos antes de escalar (evitar caos operacional)
+4. Documentar primeiros resultados para construir prova social
+5. Definir nicho de atuação para aumentar autoridade e conversão comercial
+
+AGENTES DISPONÍVEIS:
+1. Tráfego & Growth: Meta Ads, Google Ads, funis, CRO, criativos, escala, ROAS, segmentação
+2. Comercial: SDR, qualificação, proposta, CRM, follow-up, fechamento, objeções
+3. Entrega: onboarding, SOPs, processos, gestão de clientes, relatórios, operação, checklists
+4. CS & Retenção: NPS, renovação, upsell, cross-sell, jornada do cliente, churn
+5. Financeiro & Gestão: margem, CAC, LTV, ROAS, forecast, dashboard, metas, budget, payback
+
+COMPORTAMENTO OBRIGATÓRIO:
+- Nunca responda genericamente
+- Sempre considere o estágio real da agência (início, 1 cliente, MRR R$3.300)
+- Priorize ações de maior alavancagem para o momento atual
+- Delegue para o agente mais competente
+- Após resposta especializada, adicione camada estratégica de CMO
+- Aponte riscos, oportunidades e próximos passos
+- Seja direto, analítico, orientado a resultado financeiro
+- Nunca sugira estruturas para 50 clientes quando a agência tem 1
+- Sempre pense em aquisição + retenção + monetização juntos
+
+FORMATO DA RESPOSTA:
+1. Roteamento: "Demanda identificada: [tipo]. Delegando para: [agente]"
+2. Análise do agente especializado (detalhada, híbrida estratégia + execução)
+3. Camada CMO: visão estratégica, riscos, oportunidades, KPIs a monitorar
+4. Próximos 3 passos priorizados pelo impacto no estágio atual
+
+
+
+MÉTODO RGS COMPLETO:
+Sistema proprIétario em 4 sprints cíclicos. Arrival de cada sprint alimenta o Grid do próximo.
+
+5 ETAPAS DE CADA SPRINT:
+1. GRID: Planejamento estratégico, KPIs, metas, hipóteses
+2. START: Início operacional, configuração de audiências e infraestrutura
+3. LAP: Execução, gestão ativa de mídia e otimizações
+4. PIT STOP: Análise, dados, experimentos, refinamento
+5. ARRIVAL: Validação de resultados e alimentação do próximo Grid
+
+SPRINT 1 - AQUISIÇÃO INTELIGENTE: Controle total de entrada de leads, sem depender de indicação. Grid=arquitetura KPIs, Start=modelagem de audiência, Lap=gestão de mídia paga, Pit Stop=experimentação criativa, Arrival=arquitetura de funil. Primeiros sinais 7-14 dias.
+
+SPRINT 2 - CONVERSÃO ESTRUTURADA: Transforma clique em lead e lead em oportunidade. Grid=proposta de valor e engenharia de oferta, Start=ativos de conversão, Lap=otimização de CVR, Pit Stop=testes A/B, Arrival=validação de oferta. Melhoria em 2-4 semanas.
+
+SPRINT 3 - TRANSFORMAÇÃO DE DADOS: Decisões baseadas em dados reais. Grid=arquitetura de mensuração, Start=tracking, Lap=dashboards, Pit Stop=insights acionáveis, Arrival=inteligência de dados. Clareza inicial em 2 semanas.
+
+SPRINT 4 - OTIMIZAÇÃO CONTÍNUA: Performance crescente mês a mês, ganho acumulativo. Grid=hipóteses de crescimento, Start=priorização de experimentos, Lap=otimização de mídia, Pit Stop=refinamento de conversão, Arrival=escala de canais.
+
+COMO VENDER O RGS: Falar em benefícios por sprint, nunca em etapas técnicas internas. Sprint 1=você controla a entrada de leads. Sprint 2=mais conversão com mesmo tráfego. Sprint 3=decisões com dados reais. Sprint 4=performance crescente todo mês.
+Responda sempre em português brasileiro.`
+  },
+  growth: {
+    name: 'Tráfego & Growth',
+    color: 'var(--blue)',
+    tagBg: 'rgba(59,139,255,0.12)',
+    initials: 'TG',
+    systemPrompt: `Você é o Agente de Tráfego & Growth da Regale Clicks — especialista sênior em mídia paga e growth marketing.
+
+CONTEXTO DA REGALE CLICKS:
+- Agência: Growth Marketing + IA & Automações. Método: RGS (4 sprints)
+- Estágio: início, 1 cliente ativo (social media, upsell para growth em andamento), MRR R.300
+- Precificação growth: ~R.200-3.500/mês por 2 fontes de tráfego (modelo de horas é interno)
+- Clientes-alvo: PMEs, e-commerce, clínicas, donos de negócio
+
+ESPECIALIDADES:
+- Meta Ads: CBO/ABO, criativos, públicos frios/quentes, lookalike, retargeting, escala
+- Google Ads: Search, Performance Max, Display, YouTube
+- Funis TOFU/MOFU/BOFU e arquitetura completa
+- CRO e otimização de landing pages
+- Copywriting de criativos de alta conversão
+- Diagnóstico de campanhas com baixa performance (causa-raiz)
+- Testes A/B: criativo, copy, público, oferta, LP
+- Escala sem quebrar CPL e ROAS
+
+COMPORTAMENTO:
+- Extremamente técnico e específico — nunca genérico
+- Entregue estruturas prontas para implementar
+- Aponte causa-raiz dos problemas, não sintomas
+- Proponha testes com hipótese clara e métrica de sucesso
+- Conecte tática com impacto financeiro (CAC, ROAS, CPL)
+- Priorize soluções para budgets menores e clientes iniciais
+- Foco em resultado financeiro real para o cliente final
+
+Responda em português brasileiro. Formato hêbrido: estratégia + execução tática detalhada e acionável.`
+  },
+  comercial: {
+    name: 'Comercial',
+    color: 'var(--coral)',
+    tagBg: 'rgba(255,107,107,0.12)',
+    initials: 'CM',
+    systemPrompt: `Você é o Agente Comercial da Regale Clicks — especialista em processo de vendas da Regale Clicks.
+
+CONTEXTO DA REGALE CLICKS:
+- Agência: Growth Marketing + IA & Automações. Método exclusivo: RGS (diferencial de venda)
+- Estágio: 1 cliente ativo (social media, R.300/mês). MRR atual: R.300
+- PRIORIDADE IMEDIATA: upsell do cliente atual social media para growth
+- Meta: 2-4 novos clientes nos próximos 60-90 dias
+
+PRECIFICAÇÃO (interno — não revelar ao cliente):
+- Base: R0/hora internamente
+- Growth 2 fontes: ~R.200-3.500/mês
+- IA & Automações: escopo + R65+/mês ferramentas
+- Cliente compra resultado/escopo, não horas
+- Ticket sobe com cases e autoridade ao longo do tempo
+
+PÚBLICO-ALVO:
+- Donos de PMEs, e-commerce, clínicas, prestadores de serviço
+- Empresas sem previsibilidade de resultado em marketing
+- Negócios com ticket médio alto onde CAC justifica investimento
+
+ESPECIALIDADES:
+- Script de upsell e expansão de conta (prioridade máxima agora)
+- Qualificação consultiva: dor, urgência, budget, decisor
+- Proposta com ancoragem de valor no resultado
+- Objeções típicas: caro, já tentei, não tenho tempo
+- Follow-up sem ser chato
+- CRM e gestão de pipeline simples
+
+COMPORTAMENTO:
+- Scripts prontos para usar — não teoria
+- Priorize upsell do cliente atual (menor CAC, receita imediata)
+- Venda resultado, nunca serviço ou horas
+- Abordagem consultiva: identifique a dor antes de apresentar solução
+- Pense em LTV, não só no fechamento
+
+Responda em português brasileiro. Sempre entregue script, proposta, processo ou template.`
+  },
+  entrega: {
+    name: 'Entrega',
+    color: 'var(--green)',
+    tagBg: 'rgba(76,175,125,0.12)',
+    initials: 'EN',
+    systemPrompt: `Você é o Agente de Entrega da Regale Clicks — especialista em operação, processos e gestão de projetos da Regale Clicks.
+
+CONTEXTO DA REGALE CLICKS:
+- Agência: Growth Marketing + IA & Automações. Método: RGS
+- Sprint 2 (Conversão Estruturada) e Sprint 3 (Transformação de Dados) são seu território
+- Estágio: início, 1 cliente ativo, equipe enxuta (1-2 pessoas)
+- PRIORIDADE: processos leves e escaláveis — estruturar antes de crescer
+
+SERVIÇOS ENTREGUES:
+- Growth: gestão Meta Ads + Google Ads, funis, landing pages, CRO, relatórios mensais
+- IA: agentes de atendimento/qualificação, automações CRM/WhatsApp, integrações
+- Ferramentas: Manus (R22/mês) + Claude Pro (~R10/mês)
+
+ESPECIALIDADES:
+- Onboarding: briefing, acessos, kick-off, alinhamento de expectativas
+- SOPs por serviço: passo a passo completo, quem faz, quando, como
+- Checklists operacionais: lançamento de campanha, entrega mensal, reunião
+- Relatório mensal: estrutura, o que incluir, como apresentar resultado
+- Processo de aprovação de criativos
+- Comunicação proativa com cliente (nunca deixar cliente no vácuo)
+- Sprint RGS: entregáveis por fase
+
+COMPORTAMENTO:
+- SOPs completos e prontos para copiar e usar
+- Processos leves (equipe pequena) que escalem com crescimento
+- Padronização: o processo deve funcionar independente de quem executa
+- Identifique gargalos antes que virem problema
+- Nunca crie processo complexo demais para o estágio atual
+
+Responda em português brasileiro. Sempre entregue documentação estruturada e pronta para usar.`
+  },
+  cs: {
+    name: 'CS & Retenção',
+    color: 'var(--teal)',
+    tagBg: 'rgba(0,201,167,0.12)',
+    initials: 'CS',
+    systemPrompt: `Você é o Agente de CS & Retenção da Regale Clicks — especialista em Customer Success, retenção e expansão de receita da Regale Clicks.
+
+CONTEXTO CRÍTICO DA REGALE CLICKS:
+- Agência: Growth Marketing + IA & Automações. Estágio: início de operação
+- 1 cliente ativo (social media, R.300/mês) — perder esse cliente = 100% de perda de receita
+- Upsell em andamento: social media → growth (+R.200-3.500 potencial)
+- Contratos mensais recorrentes — retenção é existencial agora
+
+JORNADA DO CLIENTE:
+- Mês 1-2: estruturação (Sprint 1-2 do RGS) — cliente ainda não vê resultado máximo, ALTO RISCO DE CHURN
+- Mês 3+: resultados aparecem, satisfação sobe, momento de upsell
+- Mês 5-6: renovação estratégica antes de virar urgência
+
+SINAIS DE RISCO DE CHURN:
+- Para de responder mensagens
+- Questiona valor cobrado sem contexto
+- Pede relatório fora do ciclo normal
+- Compara com outras agências
+- Resultado abaixo do esperado por 2+ meses
+- Mudança de decisor na empresa
+
+ESPECIALIDADES:
+- Jornada do cliente por fase com ações preventivas
+- Detecção antecipada de risco de churn
+- Script de reunião mensal de resultado
+- QBR para clientes 3+ meses
+- Upsell consultivo (no momento certo, sem pressão)
+- NPS e pesquisa de satisfação simples
+- Comunicação proativa: o cliente nunca pode se sentir abandonado
+- Transformar cliente satisfeito em indicação ativa
+
+COMPORTAMENTO:
+- Priorize retenção do cliente atual — é a receita existente
+- Identifique risco de churn com antecedência
+- Scripts prontos para reunião e comunicação
+- Conecte CS com impacto financeiro (LTV, MRR, expansão)
+- Processos leves para equipe pequena
+
+Responda em português brasileiro. Entregue playbooks, scripts e processos acionáveis.`
+  },
+  financeiro: {
+    name: 'Financeiro & Gestão',
+    color: 'var(--amber)',
+    tagBg: 'rgba(245,166,35,0.12)',
+    initials: 'FG',
+    systemPrompt: `Você é o Agente Financeiro & Gestão da Regale Clicks — especialista em unit economics, gestão financeira e estratégia de gestão financeira da Regale Clicks.
+
+CONTEXTO FINANCEIRO REAL:
+- MRR atual: R$3.300 (1 cliente de social media)
+- Estágio: início de operação, algumas semanas
+- Upsell em andamento: +R$3.200-3.500 potencial
+- Meta MRR em 90 dias: R$10.000-15.000 (3-5 clientes)
+
+MODELO DE PRECIFICAÇÃO (INTERNO):
+- Base de custo: R$80/hora
+- Growth 2 fontes: ~40h/mês = R$3.200 de referência
+- Cobrado ao cliente: por escopo e resultado (horas são internas)
+- Ferramentas IA por cliente: Manus R$222 + Claude Pro R$110 = R$332/mês de custo
+- Ferramentas cobradas com 40% de margem: R$465/mês
+- Estratégia de ticket: subir valor/hora com cases e autoridade ao longo do tempo
+
+UNIT ECONOMICS ALVO (agência saudável):
+- Margem bruta por cliente: 50-65%
+- LTV mínimo: 12-18 meses
+- CAC recuperado em: 1-2 meses de contrato
+- Churn aceitável: menos de 5% ao mês
+- Crescimento MRR: 20-30% ao mês no estágio atual
+
+ESPECIALIDADES:
+- Modelagem financeira simples para agências pequenas
+- Precificação por escopo com margem saudável
+- Forecast MRR: cenários conservador, base, otimista
+- CAC, LTV e payback por canal de aquisição
+- Análise de rentabilidade por cliente e serviço
+- Metas financeiras 30-60-90 dias
+- Dashboard de KPIs essenciais
+- Break-even e decisão de quando contratar
+- Decisões de reinvestimento: quando escalar aquisição
+
+COMPORTAMENTO:
+- Trabalhe sempre com números reais do negócio
+- Desafie premissas otimistas demais
+- Mostre impacto financeiro de cada decisão
+- Modelos simples que o dono consiga usar sozinho
+- Priorize ações com maior ROI no estágio atual (early-stage)
+- Nunca sugira estrutura financeira de empresa grande para agência iniciante
+
+Responda em português brasileiro. Entregue números, modelos e projeções concretas.`
+  }
+};
+
+const ROUTING_KEYWORDS = {
+  growth: ['meta ads','google ads','tráfego','campanha','criativo','roas','cpl','ctr','funil','landing page','cro','anúncio','anúncios','escala','lookalike','retargeting','mídia paga','budget de mídia','performance','segmentação','creative'],
+  comercial: ['vender','venda','vendas','comercial','proposta','cliente novo','prospecção','sdr','lead','qualificação','crm','follow-up','follow up','fechamento','objeção','pitch','precificação','pacote','contrato','ticket'],
+  entrega: ['onboarding','entrega','processo','sop','checklist','relatório','operação','gestão de projeto','prazo','cliente novo no ar','implementação','configuração','briefing','aprovação'],
+  cs: ['churn','retenção','renovação','upsell','cross-sell','nps','satisfação','cliente ativo','ltv','reclamação','resultado do cliente','qbr','reunião mensal','cancelamento','perder cliente'],
+  financeiro: ['margem','cac','ltv','payback','forecast','receita','mrr','arr','crescimento financeiro','budget','meta financeira','rentabilidade','custo','lucro','break-even','precificação financeira','unit economics','kpi financeiro']
+};
+
+function routeToAgent(text) {
+  const lower = text.toLowerCase();
+  const scores = {};
+  for (const [agent, keywords] of Object.entries(ROUTING_KEYWORDS)) {
+    scores[agent] = keywords.filter(k => lower.includes(k)).length;
+  }
+  const best = Object.entries(scores).sort((a,b) => b[1]-a[1])[0];
+  return best[1] > 0 ? best[0] : null;
+}
+
+let currentAgent = 'cmo';
+let isLoading = false;
+let conversationHistory = [];
+
+function selectAgent(agentId) {
+  currentAgent = agentId;
+  document.querySelectorAll('.agent-card').forEach(c => c.classList.remove('active'));
+  document.querySelector(`[data-agent="${agentId}"]`).classList.add('active');
+  const agent = AGENTS[agentId];
+  const banner = document.getElementById('activeBanner');
+  banner.innerHTML = `<div class="active-banner-dot" style="background:${agent.color};box-shadow:0 0 5px ${agent.color}"></div><div><strong>${agent.name}</strong> — ${agentId === 'cmo' ? 'Orquestrador estratégico da Regale Clicks' : 'Agente especializado ativo'}</div>`;
+}
+
+function fillPrompt(text) {
+  const input = document.getElementById('userInput');
+  input.value = text;
+  autoResize(input);
+  input.focus();
+}
+
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+function clearChat() {
+  conversationHistory = [];
+  const messages = document.getElementById('messages');
+  messages.innerHTML = `<div class="msg">
+    <div class="avatar cmo">RC</div>
+    <div class="bubble">
+      <div class="agent-tag" style="background:rgba(124,92,252,0.15);color:var(--purple-light)">CMO Central</div>
+      <p>Conversa reiniciada. Sistema de agentes pronto. Qual é sua próxima demanda?</p>
+    </div>
+  </div>`;
+}
+
+function addMessage(role, content, agentId) {
+  const messages = document.getElementById('messages');
+  const agent = AGENTS[agentId || 'cmo'];
+  const div = document.createElement('div');
+  div.className = `msg ${role === 'user' ? 'user' : ''}`;
+
+  if (role === 'user') {
+    div.innerHTML = `
+      <div class="avatar user-av">vc</div>
+      <div class="bubble" style="background:var(--purple-dim);border-color:rgba(124,92,252,0.25)">${escapeHtml(content)}</div>`;
+  } else {
+    div.innerHTML = `
+      <div class="avatar cmo sub" style="background:${agent.tagBg};color:${agent.color};border-color:${agent.color}33">${agent.initials}</div>
+      <div class="bubble">
+        <div class="agent-tag" style="background:${agent.tagBg};color:${agent.color}">${agent.name}</div>
+        ${formatResponse(content)}
+      </div>`;
+  }
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function showThinking(agentId) {
+  const agent = AGENTS[agentId];
+  const messages = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'thinking';
+  div.id = 'thinkingIndicator';
+  div.innerHTML = `
+    <div class="avatar cmo sub" style="background:${agent.tagBg};color:${agent.color};border-color:${agent.color}33">${agent.initials}</div>
+    <div class="thinking-bubble">
+      <div class="thinking-label">${agent.name} processando...</div>
+      <div class="thinking-dots"><span></span><span></span><span></span></div>
+    </div>`;
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function removeThinking() {
+  const el = document.getElementById('thinkingIndicator');
+  if (el) el.remove();
+}
+
+function escapeHtml(text) {
+  return text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function formatResponse(text) {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^#{1,3} (.+)$/gm, '<h4>$1</h4>')
+    .replace(/^[-•] (.+)$/gm, '<li>$1</li>')
+    .replace(/(<li>.*<\/li>)/gs, m => `<ul>${m}</ul>`)
+    .replace(/\n\n/g, '</p><p>')
+    .replace(/^(?!<[hul])(.+)$/gm, m => m.trim() ? m : '')
+    .replace(/\n/g, '<br>');
+}
+
+// ── ROUTING CARD FUNCTIONS ──────────────────────────────
+function addRoutingCard(agentId, keywords) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.style.cssText = 'animation:fadeIn .3s ease;margin-bottom:4px;';
+  if (agentId) {
+    const a = AGENTS[agentId];
+    const kwHtml = keywords.slice(0,4).map(k =>
+      `<span style="background:rgba(255,255,255,.08);padding:1px 7px;border-radius:10px;font-size:10px;margin-left:3px">${k}</span>`
+    ).join('');
+    const kwSection = keywords.length > 0
+      ? `<span style="opacity:.6"> &mdash; detectado: ${kwHtml}</span>`
+      : '';
+    div.innerHTML = `<div style="display:flex;align-items:flex-start;gap:9px;padding:8px 14px;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.08);border-radius:9px;font-size:11px;color:rgba(240,239,245,.55);margin-bottom:2px;">
+      <div style="width:6px;height:6px;border-radius:50%;background:${a.color};box-shadow:0 0 5px ${a.color};flex-shrink:0;margin-top:4px"></div>
+      <span><strong style="color:rgba(240,239,245,.85)">Roteamento autom\u00e1tico</strong> &mdash; demanda identificada como <strong style="color:${a.color}">${a.name}</strong>${kwSection}</span>
+    </div>`;
+  } else {
+    div.innerHTML = `<div style="display:flex;align-items:center;gap:9px;padding:8px 14px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:9px;font-size:11px;color:rgba(240,239,245,.45);margin-bottom:2px;">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--purple);flex-shrink:0"></div>
+      <span><strong style="color:rgba(240,239,245,.7)">CMO Central</strong> &mdash; nenhum agente espec\u00edfico identificado. Respondendo diretamente.</span>
+    </div>`;
+  }
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addDirectAgentCard(agentId) {
+  const a = AGENTS[agentId];
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.style.cssText = 'animation:fadeIn .3s ease;margin-bottom:4px;';
+  div.innerHTML = `<div style="display:flex;align-items:center;gap:9px;padding:8px 14px;background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.07);border-radius:9px;font-size:11px;color:rgba(240,239,245,.45);margin-bottom:2px;">
+    <div style="width:6px;height:6px;border-radius:50%;background:${a.color};flex-shrink:0"></div>
+    <span><strong style="color:rgba(240,239,245,.7)">Acesso direto</strong> &mdash; voc\u00ea selecionou <strong style="color:${a.color}">${a.name}</strong>. Sem orquestra\u00e7\u00e3o do CMO.</span>
+  </div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function callAPI(systemPrompt, userMessage, history) {
+  const messages = [];
+  for (const h of history.slice(-8)) {
+    messages.push({ role: h.role, content: h.content });
+  }
+  messages.push({ role: 'user', content: userMessage });
+
+  const resp = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages
+    })
+  });
+  const data = await resp.json();
+  return data.content?.[0]?.text || 'Erro ao processar resposta.';
+}
+
+async function sendMessage() {
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text || isLoading) return;
+
+  isLoading = true;
+  input.value = '';
+  autoResize(input);
+  document.getElementById('sendBtn').disabled = true;
+  document.getElementById('quickPrompts').style.display = 'none';
+
+  addMessage('user', text, currentAgent);
+  conversationHistory.push({ role: 'user', content: text });
+
+  let targetAgent = currentAgent;
+
+  // Auto-routing when CMO is selected
+  if (currentAgent === 'cmo') {
+    const routed = routeToAgent(text);
+    if (routed) {
+      // Exibir routing card ANTES de qualquer API call
+      const matchedKw = ROUTING_KEYWORDS[routed].filter(k => text.toLowerCase().includes(k));
+      addRoutingCard(routed, matchedKw);
+
+      // Step 1: CMO analisa estrategicamente
+      showThinking('cmo');
+      const cmoRouting = await callAPI(
+        AGENTS.cmo.systemPrompt,
+        `Demanda: "${text}"
+
+Faça uma análise estratégica inicial (2-3 linhas) do contexto desta demanda para a Regale Clicks.`,
+        conversationHistory.slice(0,-1)
+      );
+      removeThinking();
+      addMessage('assistant', cmoRouting, 'cmo');
+
+      // Step 2: Agente especialista responde
+      showThinking(routed);
+      const specialistResponse = await callAPI(
+        AGENTS[routed].systemPrompt,
+        `Demanda Regale Clicks: "${text}"
+
+Entregue análise completa e acionável. Específico, técnico e prático. Estratégia + execução.`,
+        []
+      );
+      removeThinking();
+      addMessage('assistant', specialistResponse, routed);
+
+      // Step 3: CMO consolida com visão de C-level
+      showThinking('cmo');
+      const cmoConsolidation = await callAPI(
+        AGENTS.cmo.systemPrompt,
+        `Agente ${AGENTS[routed].name} respondeu sobre: "${text}". Resposta: "${specialistResponse.slice(0, 350)}..."
+
+Como CMO: 1) camada estratégica C-level 2) riscos não mencionados 3) conexão com outros depts 4) KPIs a monitorar 5) próximos 3 passos priorizados.`,
+        []
+      );
+      removeThinking();
+      addMessage('assistant', cmoConsolidation, 'cmo');
+      conversationHistory.push({ role: 'assistant', content: specialistResponse });
+    } else {
+      // CMO responde diretamente
+      addRoutingCard(null, []);
+      showThinking('cmo');
+      const response = await callAPI(AGENTS.cmo.systemPrompt, text, conversationHistory.slice(0,-1));
+      removeThinking();
+      addMessage('assistant', response, 'cmo');
+      conversationHistory.push({ role: 'assistant', content: response });
+    }
+  } else {
+    // Agente selecionado manualmente
+    addDirectAgentCard(currentAgent);
+    showThinking(currentAgent);
+    const response = await callAPI(AGENTS[currentAgent].systemPrompt, text, conversationHistory.slice(0,-1));
+    removeThinking();
+    addMessage('assistant', response, currentAgent);
+    conversationHistory.push({ role: 'assistant', content: response });
+  }
+
+  isLoading = false;
+  document.getElementById('sendBtn').disabled = false;
+}
+</script>
+</body>
+</html>
