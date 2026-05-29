@@ -458,7 +458,7 @@
         <div class="qp" onclick="fillPrompt('Preciso de um SOP de onboarding de clientes')">SOP Onboarding</div>
       </div>
       <div class="input-wrap">
-        <textarea id="userInput" placeholder="Qual é sua demanda?" rows="1" onkeydown="handleKey(event)" oninput="autoResize(this)"></textarea>
+        <textarea id="userInput" placeholder="Qual é sua demanda?" rows="1" oninput="autoResize(this)"></textarea>
         <button class="send-btn" id="sendBtn" onclick="sendMessage()">
           <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
         </button>
@@ -1153,7 +1153,12 @@ function autoResize(el) {
 }
 
 function handleKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    sendMessage();
+    return false;
+  }
 }
 
 function clearChat() {
@@ -1369,6 +1374,14 @@ Como CMO: 1) camada estratégica C-level 2) riscos não mencionados 3) conexão 
   isLoading = false;
   document.getElementById('sendBtn').disabled = false;
 }
+
+document.getElementById('userInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    e.stopPropagation();
+    sendMessage();
+  }
+}, true);
 </script>
 </body>
 </html>
